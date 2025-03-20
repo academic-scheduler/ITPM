@@ -20,4 +20,5 @@ from django.urls import path,include # type: ignore
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('accounts.urls')),
+    path('api/room-allocation/', include('room_allocation.urls')),
 ]
