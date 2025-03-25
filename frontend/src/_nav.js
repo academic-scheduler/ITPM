@@ -5,6 +5,7 @@ import {
   cilChartPie,
   cilPuzzle,
   cilSpeedometer,
+  cilUserFemale
 } from '@coreui/icons'
 import { CNavItem, CNavTitle } from '@coreui/react'
 
@@ -37,6 +38,14 @@ const getNav = (username) => [
     to: '/lecturer-requests',
     icon: <CIcon icon={cilBell} customClassName="nav-icon" />,
   },
+
+  {
+    component: CNavItem,
+    name: 'Smart Assistant',
+    to: '/smart-assistant',
+    icon: <CIcon icon={cilUserFemale} customClassName="nav-icon" />,
+  },
+
   {
     component: CNavTitle,
     name: 'Account',
