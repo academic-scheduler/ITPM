@@ -35,7 +35,7 @@ class RoomRequest(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=[("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected"), ("canceled", "Canceled")], default="pending")
+    status = models.CharField(max_length=20, default="pending")
 
     def __str__(self):
         return f"Request for {self.room.name} by {self.requested_by.username}"
