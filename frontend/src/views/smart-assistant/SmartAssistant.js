@@ -3,6 +3,7 @@
 // frontend/src/views/smart-assistant/SmartAssistant.js
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import '../../scss/smartassistant.scss'
 
 // Added validation utility function
 const validateTimes = (startTime, endTime) => {
@@ -45,6 +46,7 @@ const SmartAssistant = () => {
       start_time: defaultStart.toISOString().slice(0, 16),
       end_time: defaultEnd.toISOString().slice(0, 16),
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Handle form input changes
@@ -195,7 +197,7 @@ const SmartAssistant = () => {
 
       {result && (
         <div className="result-container">
-          <h3>Best Available Slot Found:</h3>
+          <h3>Best Available Time Slot </h3>
           <p>Start: {result.start.toLocaleString()}</p>
           <p>End: {result.end.toLocaleString()}</p>
         </div>
