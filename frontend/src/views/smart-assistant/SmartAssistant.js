@@ -1,8 +1,22 @@
 /* eslint-disable prettier/prettier */
 
 // frontend/src/views/smart-assistant/SmartAssistant.js
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+
+// Added validation utility function
+const validateTimes = (startTime, endTime) => {
+  const errors = {}
+  const now = new Date()
+  const startDate = new Date(startTime)
+  const endDate = new Date(endTime)
+
+  if (startDate < now) errors.start_time = 'Start time cannot be in the past'
+  if (endDate < now) errors.end_time = 'End time cannot be in the past'
+  if (endDate <= startDate) errors.end_time = 'End time must be after start time'
+
+  return errors
+}
 
 const SmartAssistant = () => {
   const [inputs, setInputs] = useState({
@@ -14,13 +28,57 @@ const SmartAssistant = () => {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
 
+  // Added separate state for field-specific errors
+  const [fieldErrors, setFieldErrors] = useState({
+    start_time: '',
+    end_time: '',
+  })
+
+  // Added useEffect to set initial times
+  useEffect(() => {
+    const now = new Date()
+    const defaultStart = new Date(now.getTime() + 330 * 60000) // 5 minutes from now
+    const defaultEnd = new Date(defaultStart.getTime() + 60 * 60000) // +1 hour
+
+    setInputs({
+      ...inputs,
+      start_time: defaultStart.toISOString().slice(0, 16),
+      end_time: defaultEnd.toISOString().slice(0, 16),
+    })
+  }, [])
+
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setInputs((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+
+    if (name === 'instructor_id' || name === 'room_id') {
+      // Allow only digits (0-9) and empty string
+      const numericValue = value.replace(/[^0-9]/g, '')
+      setInputs((prev) => ({
+        ...prev,
+        [name]: numericValue,
+      }))
+    } else {
+      // Handle other fields normally
+      setInputs((prev) => ({
+        ...prev,
+        [name]: value,
+      }))
+    }
+
+    // Added real-time validation
+    if (name === 'start_time' || name === 'end_time') {
+      const errors = validateTimes(inputs.start_time, inputs.end_time)
+      setFieldErrors(errors)
+    }
+  }
+
+  // Add key press blocking for non-numeric input
+  const handleNumberKeyPress = (e) => {
+    const charCode = e.key
+    if (!/[0-9]|Backspace|Delete|Arrow/.test(charCode)) {
+      e.preventDefault()
+    }
   }
 
   // Handle form submission
@@ -28,6 +86,13 @@ const SmartAssistant = () => {
     e.preventDefault()
     setError('')
     setResult(null)
+
+    // Modified validation to include time checks
+    const timeErrors = validateTimes(inputs.start_time, inputs.end_time)
+    if (Object.keys(timeErrors).length > 0) {
+      setFieldErrors(timeErrors)
+      return
+    }
 
     // Validate inputs
     if (!inputs.instructor_id || !inputs.room_id || !inputs.start_time || !inputs.end_time) {
@@ -70,10 +135,13 @@ const SmartAssistant = () => {
         <div className="form-group">
           <label>Instructor ID:</label>
           <input
-            type="number"
+            type="text" // Changed from number to text for better control
             name="instructor_id"
             value={inputs.instructor_id}
             onChange={handleInputChange}
+            onKeyDown={handleNumberKeyPress} // Added key press handler
+            inputMode="numeric" // Shows numeric keyboard on mobile
+            pattern="[0-9]*" // HTML5 pattern validation
             required
           />
         </div>
@@ -81,10 +149,13 @@ const SmartAssistant = () => {
         <div className="form-group">
           <label>Room ID:</label>
           <input
-            type="number"
+            type="text" // Changed from number to text
             name="room_id"
             value={inputs.room_id}
             onChange={handleInputChange}
+            onKeyDown={handleNumberKeyPress}
+            inputMode="numeric"
+            pattern="[0-9]*"
             required
           />
         </div>
@@ -96,8 +167,10 @@ const SmartAssistant = () => {
             name="start_time"
             value={inputs.start_time}
             onChange={handleInputChange}
+            min={new Date().toISOString().slice(0, 16)}
             required
           />
+          {fieldErrors.start_time && <div className="error-text">{fieldErrors.start_time}</div>}
         </div>
 
         <div className="form-group">
@@ -107,8 +180,10 @@ const SmartAssistant = () => {
             name="end_time"
             value={inputs.end_time}
             onChange={handleInputChange}
+            min={inputs.start_time || new Date().toISOString().slice(0, 16)}
             required
           />
+          {fieldErrors.end_time && <div className="error-text">{fieldErrors.end_time}</div>}
         </div>
 
         <button type="submit" className="submit-btn">
