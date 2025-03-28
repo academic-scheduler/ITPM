@@ -1,0 +1,118 @@
+// frontend/src/views/smart-assistant/smartassistant.scss
+@use "@coreui/coreui/scss/coreui" as *;
+
+.smart-assistant-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: var(--cui-body-bg);
+  border-radius: $border-radius-lg;
+  box-shadow: $box-shadow-sm;
+
+  h2 {
+    color: var(--cui-body-color);
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+}
+
+.booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    label {
+      font-weight: $font-weight-semibold;
+      color: var(--cui-body-color);
+    }
+
+    input[type="text"],
+    input[type="datetime-local"] {
+      width: 100%;
+      padding: $input-padding-y $input-padding-x;
+      border: $input-border-width solid $input-border-color;
+      border-radius: $border-radius;
+      background-color: var(--cui-border-color);
+      color: var(--cui-body-color);
+      
+      &:focus {
+        border-color: $input-focus-border-color;
+        box-shadow: $input-focus-box-shadow;
+      }
+    }
+
+    input[inputmode="numeric"] {
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      -moz-appearance: textfield;
+    }
+  }
+}
+
+.error-text {
+  color: var(--cui-danger);
+  font-size: $font-size-sm;
+  margin-top: 0.25rem;
+}
+
+.error-message {
+  color: var(--cui-danger);
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: $border-radius;
+  background-color: var(--cui-danger-bg);
+}
+
+.result-container {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: var(--cui-success-bg);
+  border-radius: $border-radius;
+  border: 1px solid var(--cui-success-border-subtle);
+
+  h3 {
+    color: var(--cui-success-text);
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: var(--cui-body-color);
+    margin-bottom: 0.5rem;
+  }
+}
+
+.submit-btn {
+  align-self: center;
+  padding: $btn-padding-y-lg $btn-padding-x-lg;
+  background-color: var(--cui-success);
+  color: var(--cui-white);
+  border: none;
+  border-radius: $border-radius-lg;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
+    background-color: var(--cui-success-text-emphasis);
+  }
+}
+
+// Responsive adjustments
+@include media-breakpoint-down(md) {
+  .smart-assistant-container {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .submit-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
