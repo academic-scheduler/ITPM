@@ -103,40 +103,45 @@ const LecturerRequests = () => {
   }
 
   const handleAddRequest = async (e) => {
-    e.preventDefault()
-
+    e.preventDefault();
+  
     // Validate date/time
-    const validationErrors = validateDateTime(newRequest.start_time, newRequest.end_time)
+    const validationErrors = validateDateTime(newRequest.start_time, newRequest.end_time);
     if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors)
-      return
+      setErrors(validationErrors);
+      return;
     }
-
+  
     try {
       const payload = {
-        ...newRequest,
-        requested_by: userId,
+        room_id: parseInt(newRequest.room),  // Send as room_id instead of room
+        requested_by_id: userId,            // Send as requested_by_id
         start_time: new Date(newRequest.start_time).toISOString(),
         end_time: new Date(newRequest.end_time).toISOString(),
-      }
-
-      const response = await api.post('api/room-allocation/room-requests/', payload)
-      setRequests([...requests, response.data])
-      setShowAddForm(false)
+        status: 'pending'
+      };
+  
+      const response = await api.post('api/room-allocation/room-requests/', payload);
+      setRequests([...requests, response.data]);
+      setShowAddForm(false);
       setNewRequest({
         room: '',
         start_time: '',
         end_time: '',
         status: 'pending',
-      })
-      setErrors({})
+      });
+      setErrors({});
+      alert('Request created successfully!');
     } catch (error) {
+      console.error('Error adding request:', error);
       if (error.response?.data) {
-        setErrors(error.response.data)
+        setErrors(error.response.data);
+        alert(`Error: ${JSON.stringify(error.response.data)}`);
+      } else {
+        alert('Failed to create request');
       }
-      console.error('Error adding request:', error.response?.data || error.message)
     }
-  }
+  };
 
   const handleEdit = (request) => {
     setEditingRequest(request.id)
