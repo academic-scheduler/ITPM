@@ -1,3 +1,6 @@
+// // /* eslint-disable prettier/prettier */
+// export default ScheduleViewer;
+/* eslint-disable prettier/prettier */
 import React, { useEffect, useState } from 'react'
 import api from '../../services/api'
 import './ScheduleViewer.css'
