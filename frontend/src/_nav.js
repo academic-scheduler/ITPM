@@ -1,6 +1,14 @@
 /* eslint-disable prettier/prettier */
 import CIcon from '@coreui/icons-react'
-import { cilBell, cilChartPie, cilPuzzle, cilSpeedometer, cilUserFemale } from '@coreui/icons'
+import {
+  cilBell,
+  cilChartPie,
+  cilPuzzle,
+  cilSpeedometer,
+  cilUserFollow,
+  cilEducation,
+  cilUserFemale
+} from '@coreui/icons'
 import { CNavItem, CNavTitle } from '@coreui/react'
 
 const getNav = (username) => [
@@ -13,6 +21,18 @@ const getNav = (username) => [
   {
     component: CNavTitle,
     name: 'Functions',
+  },
+  {
+    component: CNavItem,
+    name: 'Add Staff',
+    to: '/add-staff',
+    icon: <CIcon icon={cilUserFollow} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Add Course',
+    to: '/add-course',
+    icon: <CIcon icon={cilEducation} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
@@ -32,14 +52,12 @@ const getNav = (username) => [
     to: '/lecturer-requests',
     icon: <CIcon icon={cilBell} customClassName="nav-icon" />,
   },
-
   {
     component: CNavItem,
     name: 'Smart Assistant',
     to: '/smart-assistant',
     icon: <CIcon icon={cilUserFemale} customClassName="nav-icon" />,
   },
-
   {
     component: CNavItem,
     name: 'Lecturer Requests',

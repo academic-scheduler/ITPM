@@ -3,8 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from .models import Profile  # Import the Profile model
-from django.http import JsonResponse  # Add this import
+from rest_framework.authtoken.models import Token
+from .models import Profile
+from .serializers import ProfileSerializer
+from django.http import JsonResponse
 
 @api_view(['POST'])
 def api_login(request):
@@ -25,15 +27,49 @@ def api_logout(request):
     return Response({'message': 'Logged out successfully'})
 
 @api_view(['POST'])
+def login_user(request):
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    if not username or not password:
+        return Response({'error': 'Both username and password are required'}, 
+                       status=status.HTTP_400_BAD_REQUEST)
+
+    user = authenticate(username=username, password=password)
+    
+    if user:
+        token, created = Token.objects.get_or_create(user=user)
+        try:
+            profile = Profile.objects.get(user=user)
+            role = 'instructor' if profile.is_instructor else (
+                'lecturer' if profile.is_lecturer else 'student'
+            )
+        except Profile.DoesNotExist:
+            role = 'student'
+            
+        return Response({
+            'token': token.key,
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': role
+        }, status=status.HTTP_200_OK)
+    else:
+        return Response({'error': 'Invalid credentials'}, 
+                       status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['POST'])
 def register_user(request):
     data = request.data
     username = data.get('username')
     email = data.get('email')
     password = data.get('password1')
-    password2 = data.get('password2')  # Add password confirmation
+    password2 = data.get('password2')
     first_name = data.get('first_name')
     last_name = data.get('last_name')
-    role = data.get('role')  # Get the role (student, lecturer, or instructor)
+    role = data.get('role')
 
     # Validate required fields
     if not username or not email or not password or not first_name or not last_name or not role:
@@ -45,6 +81,7 @@ def register_user(request):
 
     if User.objects.filter(username=username).exists():
         return Response({'error': 'Username already taken'}, status=status.HTTP_400_BAD_REQUEST)
+
     if User.objects.filter(email=email).exists():
         return Response({'error': 'Email already taken'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -59,34 +96,54 @@ def register_user(request):
     
     # Create Profile and assign role
     profile = Profile.objects.create(user=user)
-    
-    # Assign the role to the user profile
-    if role == 'student':
-        profile.is_student = True
+    if role == 'instructor':
+        profile.is_instructor = True
     elif role == 'lecturer':
         profile.is_lecturer = True
-    elif role == 'instructor':
-        profile.is_instructor = True
+    elif role == 'student':
+        profile.is_student = True
     else:
         return Response({'error': 'Invalid role. Choose "student", "lecturer", or "instructor".'},
-                        status=status.HTTP_400_BAD_REQUEST)
+                       status=status.HTTP_400_BAD_REQUEST)
     
     profile.save()
-    
-    return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
 
+    serializer = ProfileSerializer(profile)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+@api_view(['GET'])
+def get_users(request):
+    try:
+        users = User.objects.all()
+        data = []
+        for user in users:
+            try:
+                profile = Profile.objects.get(user=user)
+                role = 'instructor' if profile.is_instructor else (
+                    'lecturer' if profile.is_lecturer else 'student'
+                )
+            except Profile.DoesNotExist:
+                role = 'student'
+            data.append({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': role,
+            })
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@api_view(['GET'])
 def get_user(request):
-    # Get the user_id from the query parameters
     user_id = request.GET.get('user_id')
-
     if not user_id:
         return JsonResponse({'error': 'user_id is required'}, status=400)
 
     try:
-        # Fetch the user from the auth_user table
         user = User.objects.get(id=user_id)
-        # Prepare the response data
         data = {
             'id': user.id,
             'username': user.username,
@@ -99,14 +156,43 @@ def get_user(request):
         return JsonResponse(data)
     except User.DoesNotExist:
         return JsonResponse({'error': 'User not found'}, status=404)
-    
 
-    
+@api_view(['PUT'])
+def edit_user(request, pk):
+    try:
+        user = User.objects.get(pk=pk)
+        profile = Profile.objects.get(user=user)
+    except (User.DoesNotExist, Profile.DoesNotExist):
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Update User fields
+    user_data = request.data.get('user', {})
+    user.username = user_data.get('username', user.username)
+    user.email = user_data.get('email', user.email)
+    user.first_name = user_data.get('first_name', user.first_name)
+    user.last_name = user_data.get('last_name', user.last_name)
+    user.save()
+
+    # Update Profile fields
+    profile.is_instructor = request.data.get('is_instructor', profile.is_instructor)
+    profile.is_lecturer = request.data.get('is_lecturer', profile.is_lecturer)
+    profile.save()
+
+    serializer = ProfileSerializer(profile)
+    return Response(serializer.data)
+
+@api_view(['DELETE'])
+def delete_user(request, pk):
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    user.delete()
+    return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
 @api_view(['GET'])
 def get_user_by_username(request):
-    """
-    Get user details by username
-    """
     username = request.GET.get('username')
     if not username:
         return Response({'error': 'username parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -127,15 +213,11 @@ def get_user_by_username(request):
 
 @api_view(['GET'])
 def get_user_room_requests(request):
-    """
-    Get room requests for a specific user
-    """
     user_id = request.GET.get('user_id')
     if not user_id:
         return Response({'error': 'user_id parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Assuming you have a RoomRequest model
         from room_allocation.models import RoomRequest
         requests = RoomRequest.objects.filter(requested_by=user_id)
         serialized_requests = [{
