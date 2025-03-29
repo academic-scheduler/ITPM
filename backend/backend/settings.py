@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'accounts',
+    'course_management',   
 ]
 
 MIDDLEWARE = [
@@ -85,7 +87,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'Academic_Scheduler',
         'USER': 'postgres',
-        'PASSWORD': '220038',
+        'PASSWORD': '200235601579',
         'HOST': 'localhost'
     }
 }

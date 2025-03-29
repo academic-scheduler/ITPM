@@ -5,6 +5,8 @@ import {
   cilChartPie,
   cilPuzzle,
   cilSpeedometer,
+  cilUserFollow,
+  cilEducation,
 } from '@coreui/icons'
 import { CNavItem, CNavTitle } from '@coreui/react'
 
@@ -18,6 +20,18 @@ const getNav = (username) => [
   {
     component: CNavTitle,
     name: 'Functions',
+  },
+  {
+    component: CNavItem,
+    name: 'Add Staff',
+    to: '/add-staff',
+    icon: <CIcon icon={cilUserFollow} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Add Course',
+    to: '/add-course',
+    icon: <CIcon icon={cilEducation} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
