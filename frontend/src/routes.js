@@ -8,6 +8,7 @@ const RoomAllocation = React.lazy(() => import('./views/Room-allocation/RoomAllo
 const ScheduleViewer = React.lazy(() => import('./views/Schedule-viewer/ScheduleViewer'))
 const LecturerRequests = React.lazy(() => import('./views/Lecturer-requests/LecturerRequests'))
 const LecturerRequestsAdmin = React.lazy(() => import('./views/Lecturer-requests-admin/LecturerRequestAdmin'))
+const SmartAssistant = React.lazy(() => import('./views/smart-assistant/SmartAssistant'))
 
 const routes = [
   { path: '/room-allocation', name: 'Room Allocation', element: RoomAllocation },
@@ -16,6 +17,7 @@ const routes = [
   { path: '/', exact: true, name: 'Home' },
   { path: '/dashboard', name: 'Dashboard', element: Dashboard },
   { path: '/lecturer-requests-admin', name: 'Lecturer Requests Admin', element: LecturerRequestsAdmin },
+  { path: '/smart-assistant', name: 'Smart Assistant', element: SmartAssistant },
 ]
 
 export default routes
