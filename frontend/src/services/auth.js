@@ -9,7 +9,7 @@ export const loginUser = async (loginData) => {
   try {
     const response = await api.post('/api/login/', loginData)
     if (response.data && response.data.username) {
-      localStorage.setItem('username', response.data.username)  // Save username after login
+      localStorage.setItem('username', response.data.username) // Save username after login
     }
     return response.data
   } catch (error) {
@@ -20,7 +20,7 @@ export const loginUser = async (loginData) => {
 export const logoutUser = async () => {
   try {
     await api.post('/api/logout/')
-    localStorage.removeItem('username')  // Clear username on logout
+    localStorage.removeItem('username') // Clear username on logout
   } catch (error) {
     console.error('Logout error:', error)
   }
