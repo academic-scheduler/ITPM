@@ -49,18 +49,18 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Django stuff:
+# Django stuff
 *.log
 *.pot
 db.sqlite3
 db.sqlite3-journal
 local_settings.py
 
-# Flask stuff:
+# Flask stuff
 instance/
 .webassets-cache
 
-# Scrapy stuff:
+# Scrapy stuff
 .scrapy
 
 # Sphinx documentation
@@ -159,7 +159,7 @@ cython_debug/
 out/
 atlassian-ide-plugin.xml
 
-# Ruff stuff:
+# Ruff stuff
 .ruff_cache/
 
 # PyPI configuration file
@@ -195,3 +195,18 @@ media/
 # Node.js/npm
 node_modules/
 dist/
+
+# AWS User-specific
+.idea/**/aws.xml
+
+# Generated files
+.idea/**/contentModel.xml
+
+# Sensitive or high-churn files
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
