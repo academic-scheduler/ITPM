@@ -314,6 +314,15 @@ GitHub.sublime-settings
 !.vscode/extensions.json 
 .history
 
-# Ignore Python cache files
-__pycache__/
+# Ignore compiled Python files
 *.pyc
+__pycache__/
+
+# Ignore environment files
+.env
+venv/
+*.log
+
+# Ignore frontend build files
+node_modules/
+dist/
