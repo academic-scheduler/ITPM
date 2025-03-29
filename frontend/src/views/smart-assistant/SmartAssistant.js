@@ -3,7 +3,7 @@
 // frontend/src/views/smart-assistant/SmartAssistant.js
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import '../../scss/smartassistant.scss'
+import '../smart-assistant/SmartAssistant.css'
 
 // Added validation utility function
 const validateTimes = (startTime, endTime) => {

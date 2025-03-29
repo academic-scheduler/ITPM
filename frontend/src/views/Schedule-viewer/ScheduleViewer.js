@@ -1,18 +1,13 @@
-// // /* eslint-disable prettier/prettier */
-// export default ScheduleViewer;
 /* eslint-disable prettier/prettier */
-import React, { useEffect, useState } from 'react'
-import api from '../../services/api'
-import './ScheduleViewer.css'
-import { FaEdit, FaTrash, FaPlus, FaSearch, FaFilePdf } from 'react-icons/fa'
+import React, { useEffect, useState, useRef } from 'react';
+import api from '../../services/api';
 
 const ScheduleViewer = () => {
-  const [schedules, setSchedules] = useState([])
-  const [filteredSchedules, setFilteredSchedules] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [editingScheduleId, setEditingScheduleId] = useState(null)
-  const [editFormData, setEditFormData] = useState({})
-  const [showAddForm, setShowAddForm] = useState(false)
+  const [schedules, setSchedules] = useState([]);
+  const [filteredSchedules, setFilteredSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
     course_code: '',
     course_name: '',
@@ -21,104 +16,181 @@ const ScheduleViewer = () => {
     start_time: '',
     end_time: '',
     status: 'scheduled',
-  })
-  const [selectedRoom, setSelectedRoom] = useState(null)
-  const [showRoomDetails, setShowRoomDetails] = useState(false)
-  const [selectedInstructor, setSelectedInstructor] = useState(null)
-  const [showInstructorDetails, setShowInstructorDetails] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+  });
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [showRoomDetails, setShowRoomDetails] = useState(false);
+  const [selectedInstructor, setSelectedInstructor] = useState(null);
+  const [showInstructorDetails, setShowInstructorDetails] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [errors, setErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
 
-  // Load jsPDF and autotable from CDN
-  useEffect(() => {
-    const loadScripts = async () => {
-      if (!window.jspdf) {
-        const jsPDFScript = document.createElement('script')
-        jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+  // Refs for focusing inputs
+  const searchInputRef = useRef(null);
+  const courseCodeRef = useRef(null);
+  const editCourseCodeRef = useRef(null);
+
+  // Load jsPDF and jspdf-autotable from CDN
+  const loadPDFLibrary = () => {
+    return new Promise((resolve) => {
+      if (window.jspdf && window.jspdf.autotable) {
+        resolve(window.jspdf);
+      } else {
+        const jsPDFScript = document.createElement('script');
+        jsPDFScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
         jsPDFScript.onload = () => {
-          const autoTableScript = document.createElement('script')
-          autoTableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js'
-          document.body.appendChild(autoTableScript)
-        }
-        document.body.appendChild(jsPDFScript)
+          const autoTableScript = document.createElement('script');
+          autoTableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js';
+          autoTableScript.onload = () => {
+            resolve(window.jspdf);
+          };
+          document.body.appendChild(autoTableScript);
+        };
+        document.body.appendChild(jsPDFScript);
       }
-    }
-
-    loadScripts()
-  }, [])
-
-  // Helper function to format ISO string for datetime-local input
-  const formatForDateTimeLocal = (isoString) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    const offset = date.getTimezoneOffset() * 60000; // offset in milliseconds
-    const localISOTime = new Date(date.getTime() - offset).toISOString().slice(0, 16);
-    return localISOTime;
+    });
   };
 
   // Fetch schedules on component mount
   useEffect(() => {
     const fetchSchedules = async () => {
       try {
-        const response = await api.get('api/room-allocation/schedules/')
-        setSchedules(response.data)
-        setFilteredSchedules(response.data)
+        const response = await api.get('api/room-allocation/schedules/');
+        setSchedules(response.data);
+        setFilteredSchedules(response.data);
       } catch (error) {
-        console.error('Error fetching schedules:', error)
+        console.error('Error fetching schedules:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchSchedules()
-  }, [])
+    fetchSchedules();
+  }, []);
 
-  // Handle search functionality
+  // Focus search input on initial load
   useEffect(() => {
-    const results = schedules.filter(
-      (schedule) =>
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, []);
+
+  // Filter schedules based on search term
+  useEffect(() => {
+    if (searchTerm === '') {
+      setFilteredSchedules(schedules);
+    } else {
+      const filtered = schedules.filter(schedule =>
         schedule.course_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         schedule.course_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         schedule.instructor.toString().includes(searchTerm) ||
         schedule.room.toString().includes(searchTerm) ||
-        schedule.status.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    setFilteredSchedules(results)
-  }, [searchTerm, schedules])
+        schedule.status.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredSchedules(filtered);
+    }
+  }, [searchTerm, schedules]);
 
-  // Handle form field changes for new schedule
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  // Validate add form
+  const validateAddForm = () => {
+    const newErrors = {};
 
-    // For datetime fields, convert to ISO string
-    if (name === 'start_time' || name === 'end_time') {
-      if (value) {
-        // Convert local datetime to ISO string
-        const date = new Date(value);
-        const isoString = date.toISOString();
-        setNewSchedule({ ...newSchedule, [name]: isoString });
-        return;
-      }
+    if (!newSchedule.course_code.trim()) {
+      newErrors.course_code = 'Course code is required';
+    } else if (newSchedule.course_code.length > 20) {
+      newErrors.course_code = 'Course code must be 20 characters or less';
     }
 
-    // For other fields
-    setNewSchedule({ ...newSchedule, [name]: value });
+    if (!newSchedule.course_name.trim()) {
+      newErrors.course_name = 'Course name is required';
+    }
+
+    if (!newSchedule.instructor) {
+      newErrors.instructor = 'Instructor is required';
+    } else if (isNaN(newSchedule.instructor)) {
+      newErrors.instructor = 'Instructor must be a number';
+    }
+
+    if (!newSchedule.room) {
+      newErrors.room = 'Room is required';
+    } else if (isNaN(newSchedule.room)) {
+      newErrors.room = 'Room must be a number';
+    }
+
+    if (!newSchedule.start_time) {
+      newErrors.start_time = 'Start time is required';
+    }
+
+    if (!newSchedule.end_time) {
+      newErrors.end_time = 'End time is required';
+    } else if (newSchedule.start_time && new Date(newSchedule.end_time) <= new Date(newSchedule.start_time)) {
+      newErrors.end_time = 'End time must be after start time';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Validate edit form
+  const validateEditForm = () => {
+    const newErrors = {};
+
+    if (!editingSchedule.course_code.trim()) {
+      newErrors.course_code = 'Course code is required';
+    } else if (editingSchedule.course_code.length > 20) {
+      newErrors.course_code = 'Course code must be 20 characters or less';
+    }
+
+    if (!editingSchedule.course_name.trim()) {
+      newErrors.course_name = 'Course name is required';
+    }
+
+    if (!editingSchedule.instructor) {
+      newErrors.instructor = 'Instructor is required';
+    } else if (isNaN(editingSchedule.instructor)) {
+      newErrors.instructor = 'Instructor must be a number';
+    }
+
+    if (!editingSchedule.room) {
+      newErrors.room = 'Room is required';
+    } else if (isNaN(editingSchedule.room)) {
+      newErrors.room = 'Room must be a number';
+    }
+
+    if (!editingSchedule.start_time) {
+      newErrors.start_time = 'Start time is required';
+    }
+
+    if (!editingSchedule.end_time) {
+      newErrors.end_time = 'End time is required';
+    } else if (editingSchedule.start_time && new Date(editingSchedule.end_time) <= new Date(editingSchedule.start_time)) {
+      newErrors.end_time = 'End time must be after start time';
+    }
+
+    setEditErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form field changes for both add and edit forms
+  const handleInputChange = (e, isEditForm = false) => {
+    const { name, value } = e.target;
+    if (isEditForm) {
+      setEditingSchedule({ ...editingSchedule, [name]: value });
+    } else {
+      setNewSchedule({ ...newSchedule, [name]: value });
+    }
   };
 
   // Handle adding a new schedule
   const handleAddSchedule = async (e) => {
-    e.preventDefault()
-    try {
-      // Normalize the datetime values before sending
-      const scheduleToAdd = {
-        ...newSchedule,
-        start_time: newSchedule.start_time ? new Date(newSchedule.start_time).toISOString() : '',
-        end_time: newSchedule.end_time ? new Date(newSchedule.end_time).toISOString() : ''
-      };
+    e.preventDefault();
+    if (!validateAddForm()) return;
 
-      const response = await api.post('api/room-allocation/schedules/', scheduleToAdd)
-      setSchedules([...schedules, response.data])
-      setFilteredSchedules([...filteredSchedules, response.data])
-      setShowAddForm(false)
+    try {
+      const response = await api.post('api/room-allocation/schedules/', newSchedule);
+      setSchedules([...schedules, response.data]);
+      setShowAddForm(false);
       setNewSchedule({
         course_code: '',
         course_name: '',
@@ -127,94 +199,98 @@ const ScheduleViewer = () => {
         start_time: '',
         end_time: '',
         status: 'scheduled',
-      })
+      });
+      setErrors({});
+      // Focus search input after adding
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
     } catch (error) {
-      console.error('Error adding schedule:', error)
+      console.error('Error adding schedule:', error);
+      if (error.response && error.response.data) {
+        // Handle API validation errors
+        const apiErrors = {};
+        for (const key in error.response.data) {
+          apiErrors[key] = error.response.data[key].join(' ');
+        }
+        setErrors(apiErrors);
+      }
     }
-  }
+  };
 
   // Handle edit mode
   const handleEdit = (schedule) => {
-    setEditingScheduleId(schedule.id)
-    setEditFormData({
-      course_code: schedule.course_code,
-      course_name: schedule.course_name,
-      instructor: schedule.instructor,
-      room: schedule.room,
-      start_time: schedule.start_time,
-      end_time: schedule.end_time,
-      status: schedule.status,
-    })
-  }
-
-  // Handle edit form input changes
-  const handleEditInputChange = (e) => {
-    const { name, value } = e.target;
-
-    // For datetime fields, convert to ISO string
-    if (name === 'start_time' || name === 'end_time') {
-      if (value) {
-        // Convert local datetime to ISO string
-        const date = new Date(value);
-        const isoString = date.toISOString();
-        setEditFormData({ ...editFormData, [name]: isoString });
-        return;
-      }
-    }
-
-    // For other fields
-    setEditFormData({ ...editFormData, [name]: value });
+    setEditingSchedule({ ...schedule });
+    setShowEditForm(true);
+    setEditErrors({});
   };
 
   // Handle saving the edited data
   const handleSave = async (e) => {
-    e.preventDefault()
-    try {
-      // Normalize the datetime values before sending
-      const scheduleToUpdate = {
-        ...editFormData,
-        start_time: editFormData.start_time ? new Date(editFormData.start_time).toISOString() : '',
-        end_time: editFormData.end_time ? new Date(editFormData.end_time).toISOString() : ''
-      };
+    e.preventDefault();
+    if (!validateEditForm()) return;
 
+    try {
       const response = await api.put(
-        `api/room-allocation/schedules/${editingScheduleId}/`,
-        scheduleToUpdate,
-      )
+        `api/room-allocation/schedules/${editingSchedule.id}/`,
+        editingSchedule
+      );
       const updatedSchedules = schedules.map((schedule) =>
-        schedule.id === editingScheduleId ? response.data : schedule,
-      )
-      setSchedules(updatedSchedules)
-      setFilteredSchedules(updatedSchedules)
-      setEditingScheduleId(null)
+        schedule.id === editingSchedule.id ? response.data : schedule
+      );
+      setSchedules(updatedSchedules);
+      setShowEditForm(false);
+      setEditingSchedule(null);
+      setEditErrors({});
+      // Focus search input after editing
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
     } catch (error) {
-      console.error('Error saving schedule:', error)
+      console.error('Error saving schedule:', error);
+      if (error.response && error.response.data) {
+        // Handle API validation errors
+        const apiErrors = {};
+        for (const key in error.response.data) {
+          apiErrors[key] = error.response.data[key].join(' ');
+        }
+        setEditErrors(apiErrors);
+      }
     }
-  }
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setShowEditForm(false);
+    setEditingSchedule(null);
+    setEditErrors({});
+    // Focus search input after cancel
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
 
   // Handle deleting a schedule with confirmation
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this schedule?')
+    const confirmDelete = window.confirm('Are you sure you want to delete this schedule?');
     if (confirmDelete) {
       try {
-        await api.delete(`api/room-allocation/schedules/${id}/`)
-        const updatedSchedules = schedules.filter((schedule) => schedule.id !== id)
-        setSchedules(updatedSchedules)
-        setFilteredSchedules(updatedSchedules)
+        await api.delete(`api/room-allocation/schedules/${id}/`);
+        setSchedules(schedules.filter((schedule) => schedule.id !== id));
       } catch (error) {
-        console.error('Error deleting schedule:', error)
+        console.error('Error deleting schedule:', error);
       }
     }
-  }
+  };
 
   // Handle clicking on room ID to fetch room details
   const handleRoomClick = async (roomId) => {
     try {
-      const response = await api.get(`api/room-allocation/rooms/${roomId}/`)
-      setSelectedRoom(response.data)
-      setShowRoomDetails(true)
+      const response = await api.get(`api/room-allocation/rooms/${roomId}/`);
+      setSelectedRoom(response.data);
+      setShowRoomDetails(true);
     } catch (error) {
-      console.error('Error fetching room details:', error)
+      console.error('Error fetching room details:', error);
       const mockRoom = {
         id: roomId,
         name: 'Room 101',
@@ -227,20 +303,20 @@ const ScheduleViewer = () => {
         has_sound_system: true,
         has_wifi: true,
         availability: true,
-      }
-      setSelectedRoom(mockRoom)
-      setShowRoomDetails(true)
+      };
+      setSelectedRoom(mockRoom);
+      setShowRoomDetails(true);
     }
-  }
+  };
 
   // Handle clicking on instructor ID to fetch instructor details
   const handleInstructorClick = async (instructorId) => {
     try {
-      const response = await api.get(`api/get-user-details/?user_id=${instructorId}`)
-      setSelectedInstructor(response.data)
-      setShowInstructorDetails(true)
+      const response = await api.get(`api/get-user-details/?user_id=${instructorId}`);
+      setSelectedInstructor(response.data);
+      setShowInstructorDetails(true);
     } catch (error) {
-      console.error('Error fetching instructor details:', error)
+      console.error('Error fetching instructor details:', error);
       const mockInstructor = {
         id: instructorId,
         username: 'John Doe',
@@ -249,216 +325,264 @@ const ScheduleViewer = () => {
         last_name: 'Doe',
         is_staff: true,
         is_active: true,
-      }
-      setSelectedInstructor(mockInstructor)
-      setShowInstructorDetails(true)
+      };
+      setSelectedInstructor(mockInstructor);
+      setShowInstructorDetails(true);
     }
-  }
+  };
 
-  // Generate PDF report using CDN version
-  const generatePDFReport = () => {
-    if (!window.jspdf) {
-      alert('PDF library is still loading. Please try again in a moment.')
-      return
+  // Generate PDF report
+  const generatePDF = async () => {
+    try {
+      const { jsPDF } = await loadPDFLibrary();
+
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(18);
+      doc.text('Schedule Report', 105, 15, { align: 'center' });
+
+      // Date
+      doc.setFontSize(12);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 25, { align: 'center' });
+
+      // Table data
+      const tableData = filteredSchedules.map(schedule => [
+        schedule.course_code,
+        schedule.course_name,
+        schedule.start_time,
+        schedule.end_time,
+        schedule.status,
+        schedule.instructor,
+        schedule.room
+      ]);
+
+      // Table headers
+      const headers = [
+        'Course Code',
+        'Course Name',
+        'Start Time',
+        'End Time',
+        'Status',
+        'Instructor ID',
+        'Room ID'
+      ];
+
+      // Generate table
+      doc.autoTable({
+        head: [headers],
+        body: tableData,
+        startY: 30,
+        styles: {
+          fontSize: 10,
+          cellPadding: 2,
+          overflow: 'linebreak'
+        },
+        headStyles: {
+          fillColor: [0, 0, 0], // Black header
+          textColor: [255, 255, 255] // White text
+        },
+        alternateRowStyles: {
+          fillColor: [240, 240, 240] // Light gray for alternate rows
+        }
+      });
+
+      // Save the PDF
+      doc.save('schedule_report.pdf');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
     }
-
-    const { jsPDF } = window.jspdf
-
-    // Create a new jsPDF instance
-    const doc = new jsPDF({
-      orientation: 'landscape'
-    })
-
-    // Title
-    doc.setFontSize(18)
-    doc.setTextColor(40)
-    doc.text('Schedule Report', 14, 22)
-
-    // Date
-    doc.setFontSize(12)
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30)
-
-    // Prepare table data
-    const tableData = filteredSchedules.map((schedule) => [
-      schedule.course_code,
-      schedule.course_name,
-      new Date(schedule.start_time).toLocaleString(),
-      new Date(schedule.end_time).toLocaleString(),
-      schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1),
-      schedule.instructor,
-      schedule.room,
-    ])
-
-    // Add the table using autoTable plugin
-    doc.autoTable({
-      head: [
-        [
-          'Course Code',
-          'Course Name',
-          'Start Time',
-          'End Time',
-          'Status',
-          'Instructor ID',
-          'Room ID',
-        ],
-      ],
-      body: tableData,
-      startY: 40,
-      styles: {
-        fontSize: 10,
-        cellPadding: 3,
-        valign: 'middle',
-      },
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-        fontStyle: 'bold',
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245],
-      },
-      columnStyles: {
-        0: { cellWidth: 25 },
-        1: { cellWidth: 40 },
-        2: { cellWidth: 40 },
-        3: { cellWidth: 40 },
-        4: { cellWidth: 20 },
-        5: { cellWidth: 25 },
-        6: { cellWidth: 15 },
-      },
-    })
-
-    // Add summary statistics
-    const summaryY = doc.lastAutoTable.finalY + 15
-    doc.setFontSize(12)
-    doc.text('Summary Statistics', 14, summaryY)
-
-    const statusCounts = filteredSchedules.reduce((acc, schedule) => {
-      acc[schedule.status] = (acc[schedule.status] || 0) + 1
-      return acc
-    }, {})
-
-    doc.setFontSize(10)
-    let yPos = summaryY + 10
-    Object.entries(statusCounts).forEach(([status, count]) => {
-      doc.text(`${status.charAt(0).toUpperCase() + status.slice(1)}: ${count}`, 14, yPos)
-      yPos += 7
-    })
-
-    doc.text(`Total Schedules: ${filteredSchedules.length}`, 14, yPos + 7)
-
-    // Save the PDF
-    doc.save(`schedule_report_${new Date().toISOString().slice(0, 10)}.pdf`)
-  }
+  };
 
   // RoomDetailsPopup component
   const RoomDetailsPopup = ({ room, onClose }) => {
     if (!room) {
       return (
-        <div className="popup-overlay">
-          <div className="popup-content">
-            <h3>Room Details</h3>
-            <p>No room details available.</p>
-            <button className="popup-close-btn" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="popup-overlay">
-        <div className="popup-content">
+        <div className="popup-container">
           <h3>Room Details</h3>
-          <p>
-            <strong>Room ID:</strong> {room.id}
-          </p>
-          <p>
-            <strong>Room Name:</strong> {room.name}
-          </p>
-          <p>
-            <strong>Capacity:</strong> {room.capacity}
-          </p>
-          <p>
-            <strong>Location:</strong> {room.location}
-          </p>
-          <p>
-            <strong>Room Type:</strong> {room.room_type}
-          </p>
-          <p>
-            <strong>Amenities:</strong>
-          </p>
-          <ul>
-            <li>AC: {room.has_ac ? 'Yes' : 'No'}</li>
-            <li>Projector: {room.has_projector ? 'Yes' : 'No'}</li>
-            <li>Whiteboard: {room.has_whiteboard ? 'Yes' : 'No'}</li>
-            <li>Sound System: {room.has_sound_system ? 'Yes' : 'No'}</li>
-            <li>Wi-Fi: {room.has_wifi ? 'Yes' : 'No'}</li>
-          </ul>
-          <p>
-            <strong>Availability:</strong> {room.availability ? 'Available' : 'Not Available'}
-          </p>
+          <p>No room details available.</p>
           <button className="popup-close-btn" onClick={onClose}>
             Close
           </button>
         </div>
+      );
+    }
+
+    return (
+      <div className="popup-container">
+        <h3>Room Details</h3>
+        <p><strong>Room ID:</strong> {room.id}</p>
+        <p><strong>Room Name:</strong> {room.name}</p>
+        <p><strong>Capacity:</strong> {room.capacity}</p>
+        <p><strong>Location:</strong> {room.location}</p>
+        <p><strong>Room Type:</strong> {room.room_type}</p>
+        <p><strong>Amenities:</strong></p>
+        <ul>
+          <li>AC: {room.has_ac ? 'Yes' : 'No'}</li>
+          <li>Projector: {room.has_projector ? 'Yes' : 'No'}</li>
+          <li>Whiteboard: {room.has_whiteboard ? 'Yes' : 'No'}</li>
+          <li>Sound System: {room.has_sound_system ? 'Yes' : 'No'}</li>
+          <li>Wi-Fi: {room.has_wifi ? 'Yes' : 'No'}</li>
+        </ul>
+        <p><strong>Availability:</strong> {room.availability ? 'Available' : 'Not Available'}</p>
+        <button className="popup-close-btn" onClick={onClose}>
+          Close
+        </button>
       </div>
-    )
-  }
+    );
+  };
 
   // InstructorDetailsPopup component
   const InstructorDetailsPopup = ({ instructor, onClose }) => {
     if (!instructor) {
       return (
-        <div className="popup-overlay">
-          <div className="popup-content">
-            <h3>Instructor Details</h3>
-            <p>No instructor details available.</p>
-            <button className="popup-close-btn" onClick={onClose}>
-              Close
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="popup-overlay">
-        <div className="popup-content">
+        <div className="popup-container">
           <h3>Instructor Details</h3>
-          <p>
-            <strong>Instructor ID:</strong> {instructor.id}
-          </p>
-          <p>
-            <strong>Username:</strong> {instructor.username}
-          </p>
-          <p>
-            <strong>Email:</strong> {instructor.email}
-          </p>
-          <p>
-            <strong>First Name:</strong> {instructor.first_name}
-          </p>
-          <p>
-            <strong>Last Name:</strong> {instructor.last_name}
-          </p>
+          <p>No instructor details available.</p>
           <button className="popup-close-btn" onClick={onClose}>
             Close
           </button>
         </div>
+      );
+    }
+
+    return (
+      <div className="popup-container">
+        <h3>Instructor Details</h3>
+        <p><strong>Instructor ID:</strong> {instructor.id}</p>
+        <p><strong>Username:</strong> {instructor.username}</p>
+        <p><strong>Email:</strong> {instructor.email}</p>
+        <p><strong>First Name:</strong> {instructor.first_name}</p>
+        <p><strong>Last Name:</strong> {instructor.last_name}</p>
+        <button className="popup-close-btn" onClick={onClose}>
+          Close
+        </button>
       </div>
-    )
-  }
+    );
+  };
+
+  // Form component for both add and edit
+  const ScheduleForm = ({ isEdit, schedule, onSubmit, onCancel, formErrors }) => {
+    // Focus on the first input when the form mounts
+    useEffect(() => {
+      const inputRef = isEdit ? editCourseCodeRef : courseCodeRef;
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, [isEdit]);
+
+    return (
+      <form onSubmit={onSubmit} className="schedule-form">
+        <h3>{isEdit ? 'Edit Schedule' : 'Add New Schedule'}</h3>
+        <div className="form-grid">
+          <div className="form-group">
+            <label>Course Code:</label>
+            <input
+              ref={isEdit ? editCourseCodeRef : courseCodeRef}
+              type="text"
+              name="course_code"
+              value={schedule.course_code}
+              onChange={(e) => handleInputChange(e, isEdit)}
+              required
+              className={formErrors.course_code ? 'input-error' : ''}
+            />
+            {formErrors.course_code && <span className="error-message">{formErrors.course_code}</span>}
+          </div>
+          <div className="form-group">
+            <label>Course Name:</label>
+            <input
+              type="text"
+              name="course_name"
+              value={schedule.course_name}
+              onChange={(e) => handleInputChange(e, isEdit)}
+              required
+              className={formErrors.course_name ? 'input-error' : ''}
+            />
+            {formErrors.course_name && <span className="error-message">{formErrors.course_name}</span>}
+          </div>
+          <div className="form-group">
+            <label>Instructor ID:</label>
+            <input
+              type="number"
+              name="instructor"
+              value={schedule.instructor}
+              onChange={(e) => handleInputChange(e, isEdit)}
+              required
+              className={formErrors.instructor ? 'input-error' : ''}
+            />
+            {formErrors.instructor && <span className="error-message">{formErrors.instructor}</span>}
+          </div>
+          <div className="form-group">
+            <label>Room ID:</label>
+            <input
+              type="number"
+              name="room"
+              value={schedule.room}
+              onChange={(e) => handleInputChange(e, isEdit)}
+              required
+              className={formErrors.room ? 'input-error' : ''}
+            />
+            {formErrors.room && <span className="error-message">{formErrors.room}</span>}
+          </div>
+          <div className="form-group">
+            <label>Start Time:</label>
+            <input
+              type="datetime-local"
+              name="start_time"
+              value={isEdit ? schedule.start_time.slice(0, 16) : schedule.start_time}
+              onChange={(e) => handleInputChange(e, isEdit)}
+              required
+              className={formErrors.start_time ? 'input-error' : ''}
+            />
+            {formErrors.start_time && <span className="error-message">{formErrors.start_time}</span>}
+          </div>
+          <div className="form-group">
+            <label>End Time:</label>
+            <input
+              type="datetime-local"
+              name="end_time"
+              value={isEdit ? schedule.end_time.slice(0, 16) : schedule.end_time}
+              onChange={(e) => handleInputChange(e, isEdit)}
+              required
+              className={formErrors.end_time ? 'input-error' : ''}
+            />
+            {formErrors.end_time && <span className="error-message">{formErrors.end_time}</span>}
+          </div>
+          <div className="form-group">
+            <label>Status:</label>
+            <select
+              name="status"
+              value={schedule.status}
+              onChange={(e) => handleInputChange(e, isEdit)}
+            >
+              <option value="scheduled">Scheduled</option>
+              <option value="completed">Completed</option>
+              <option value="canceled">Canceled</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-actions">
+          <button type="submit" className="btn-submit">
+            {isEdit ? 'Save Changes' : 'Add Schedule'}
+          </button>
+          <button type="button" className="btn-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    );
+  };
 
   return (
     <div className="schedule-viewer-container">
       <h1>Schedule Viewer</h1>
 
-      {/* Search Bar and Add Schedule Button */}
-      <div className="search-add-container">
+      {/* Search Controls */}
+      <div className="controls-container">
         <div className="search-container">
-          <FaSearch className="search-icon" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search schedules..."
             value={searchTerm}
@@ -466,334 +590,102 @@ const ScheduleViewer = () => {
             className="search-input"
           />
         </div>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className={`add-btn ${showAddForm ? 'cancel-btn' : ''}`}
-        >
-          {showAddForm ? (
-            'Cancel'
-          ) : (
-            <>
-              <FaPlus /> Add Schedule
-            </>
-          )}
-        </button>
       </div>
+
+      {/* Add Schedule Button */}
+      {!showAddForm && !showEditForm && (
+        <button className="btn-add" onClick={() => setShowAddForm(true)}>
+          Add Schedule
+        </button>
+      )}
 
       {/* Add Schedule Form */}
       {showAddForm && (
-        <form onSubmit={handleAddSchedule} className="add-schedule-form">
-          <h3>Add New Schedule</h3>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Course Code:</label>
-              <input
-                type="text"
-                name="course_code"
-                value={newSchedule.course_code}
-                onChange={handleInputChange}
-                required
-                pattern="[A-Za-z0-9]+"
-                title="Only letters and numbers allowed"
-              />
-            </div>
-            <div className="form-group">
-              <label>Course Name:</label>
-              <input
-                type="text"
-                name="course_name"
-                value={newSchedule.course_name}
-                onChange={handleInputChange}
-                required
-                minLength={3}
-                maxLength={100}
-              />
-            </div>
-            <div className="form-group">
-              <label>Instructor ID:</label>
-              <input
-                type="number"
-                name="instructor"
-                value={newSchedule.instructor}
-                onChange={handleInputChange}
-                required
-                min="1"
-              />
-            </div>
-            <div className="form-group">
-              <label>Room ID:</label>
-              <input
-                type="number"
-                name="room"
-                value={newSchedule.room}
-                onChange={handleInputChange}
-                required
-                min="1"
-              />
-            </div>
-            <div className="form-group">
-              <label>Start Time:</label>
-              <input
-                type="datetime-local"
-                name="start_time"
-                value={formatForDateTimeLocal(newSchedule.start_time)}
-                onChange={handleInputChange}
-                required
-                min={new Date().toISOString().slice(0, 16)}
-              />
-            </div>
-            <div className="form-group">
-              <label>End Time:</label>
-              <input
-                type="datetime-local"
-                name="end_time"
-                value={formatForDateTimeLocal(newSchedule.end_time)}
-                onChange={handleInputChange}
-                required
-                min={newSchedule.start_time ? formatForDateTimeLocal(newSchedule.start_time) : new Date().toISOString().slice(0, 16)}
-              />
-              {newSchedule.start_time &&
-                newSchedule.end_time &&
-                new Date(newSchedule.end_time) <= new Date(newSchedule.start_time) && (
-                  <span className="validation-error">End time must be after start time</span>
-                )}
-            </div>
-            <div className="form-group">
-              <label>Status:</label>
-              <select
-                name="status"
-                value={newSchedule.status}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="scheduled">Scheduled</option>
-                <option value="completed">Completed</option>
-                <option value="canceled">Canceled</option>
-              </select>
-            </div>
-          </div>
-          <button
-            type="submit"
-            className="submit-btn"
-            disabled={
-              !newSchedule.course_code ||
-              !newSchedule.course_name ||
-              !newSchedule.instructor ||
-              !newSchedule.room ||
-              !newSchedule.start_time ||
-              !newSchedule.end_time ||
-              new Date(newSchedule.end_time) <= new Date(newSchedule.start_time)
-            }
-          >
-            Add Schedule
-          </button>
-        </form>
+        <ScheduleForm
+          isEdit={false}
+          schedule={newSchedule}
+          onSubmit={handleAddSchedule}
+          onCancel={() => setShowAddForm(false)}
+          formErrors={errors}
+        />
       )}
 
       {/* Edit Schedule Form */}
-      {editingScheduleId && (
-        <form onSubmit={handleSave} className="edit-schedule-form">
-          <h3>Edit Schedule</h3>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Course Code:</label>
-              <input
-                type="text"
-                name="course_code"
-                value={editFormData.course_code}
-                onChange={handleEditInputChange}
-                required
-                pattern="[A-Za-z0-9]{3,10}"
-                title="3-10 letters/numbers only, no spaces"
-                maxLength="10"
-              />
-            </div>
-            <div className="form-group">
-              <label>Course Name:</label>
-              <input
-                type="text"
-                name="course_name"
-                value={editFormData.course_name}
-                onChange={handleEditInputChange}
-                required
-                minLength="5"
-                maxLength="100"
-                title="5-100 characters required"
-              />
-            </div>
-            <div className="form-group">
-              <label>Instructor ID:</label>
-              <input
-                type="number"
-                name="instructor"
-                value={editFormData.instructor}
-                onChange={handleEditInputChange}
-                required
-                min="1"
-                max="9999"
-                title="Must be a positive number (1-9999)"
-              />
-            </div>
-            <div className="form-group">
-              <label>Room ID:</label>
-              <input
-                type="number"
-                name="room"
-                value={editFormData.room}
-                onChange={handleEditInputChange}
-                required
-                min="1"
-                max="999"
-                title="Must be a positive number (1-999)"
-              />
-            </div>
-            <div className="form-group">
-              <label>Start Time:</label>
-              <input
-                type="datetime-local"
-                name="start_time"
-                value={formatForDateTimeLocal(editFormData.start_time)}
-                onChange={handleEditInputChange}
-                required
-                min={new Date().toISOString().slice(0, 16)}
-                title="Must be a future date/time"
-              />
-            </div>
-            <div className="form-group">
-              <label>End Time:</label>
-              <input
-                type="datetime-local"
-                name="end_time"
-                value={formatForDateTimeLocal(editFormData.end_time)}
-                onChange={handleEditInputChange}
-                required
-                min={editFormData.start_time ? formatForDateTimeLocal(editFormData.start_time) : new Date().toISOString().slice(0, 16)}
-                title="Must be after start time"
-              />
-              {editFormData.start_time &&
-                editFormData.end_time &&
-                new Date(editFormData.end_time) <= new Date(editFormData.start_time) && (
-                  <span className="validation-error">End time must be after start time</span>
-                )}
-            </div>
-            <div className="form-group">
-              <label>Status:</label>
-              <select
-                name="status"
-                value={editFormData.status}
-                onChange={handleEditInputChange}
-                required
-              >
-                <option value="scheduled">Scheduled</option>
-                <option value="completed">Completed</option>
-                <option value="canceled">Canceled</option>
-              </select>
-            </div>
-          </div>
-          <div className="form-buttons">
-            <button
-              type="submit"
-              className="submit-btn"
-              disabled={
-                !editFormData.course_code ||
-                !editFormData.course_name ||
-                !editFormData.instructor ||
-                !editFormData.room ||
-                !editFormData.start_time ||
-                !editFormData.end_time ||
-                new Date(editFormData.end_time) <= new Date(editFormData.start_time)
-              }
-            >
-              Save Changes
-            </button>
-            <button type="button" onClick={() => setEditingScheduleId(null)} className="cancel-btn">
-              Cancel
-            </button>
-          </div>
-        </form>
+      {showEditForm && (
+        <ScheduleForm
+          isEdit={true}
+          schedule={editingSchedule}
+          onSubmit={handleSave}
+          onCancel={handleCancelEdit}
+          formErrors={editErrors}
+        />
       )}
 
       {/* Schedule Table */}
       {loading ? (
-        <p className="loading-text">Loading schedules...</p>
+        <p>Loading schedules...</p>
       ) : (
         <>
-          <div className="table-info">
-            <p>Showing {filteredSchedules.length} schedules</p>
-          </div>
-
-          <div className="table-container">
-            <table className="schedule-table">
-              <thead>
-                <tr>
-                  <th>Course Code</th>
-                  <th>Course Name</th>
-                  <th>Start Time</th>
-                  <th>End Time</th>
-                  <th>Status</th>
-                  <th>Instructor ID</th>
-                  <th>Room ID</th>
-                  <th>Actions</th>
+          <table className="schedule-table">
+            <thead>
+              <tr>
+                <th>Course Code</th>
+                <th>Course Name</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Status</th>
+                <th>Instructor ID</th>
+                <th>Room ID</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSchedules.map((schedule) => (
+                <tr key={schedule.id}>
+                  <td>{schedule.course_code}</td>
+                  <td>{schedule.course_name}</td>
+                  <td>{schedule.start_time}</td>
+                  <td>{schedule.end_time}</td>
+                  <td>{schedule.status}</td>
+                  <td>
+                    <span
+                      className="clickable-text"
+                      onClick={() => handleInstructorClick(schedule.instructor)}
+                    >
+                      {schedule.instructor}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      className="clickable-text"
+                      onClick={() => handleRoomClick(schedule.room)}
+                    >
+                      {schedule.room}
+                    </span>
+                  </td>
+                  <td className="actions-cell">
+                    <button
+                      className="btn-edit"
+                      onClick={() => handleEdit(schedule)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn-delete"
+                      onClick={() => handleDelete(schedule.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredSchedules.length > 0 ? (
-                  filteredSchedules.map((schedule) => (
-                    <tr key={schedule.id}>
-                      <td>{schedule.course_code}</td>
-                      <td>{schedule.course_name}</td>
-                      <td>{new Date(schedule.start_time).toLocaleString()}</td>
-                      <td>{new Date(schedule.end_time).toLocaleString()}</td>
-                      <td>{schedule.status.charAt(0).toUpperCase() + schedule.status.slice(1)}</td>
-                      <td>
-                        <span
-                          className="clickable-id"
-                          onClick={() => handleInstructorClick(schedule.instructor)}
-                        >
-                          {schedule.instructor}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className="clickable-id"
-                          onClick={() => handleRoomClick(schedule.room)}
-                        >
-                          {schedule.room}
-                        </span>
-                      </td>
-                      <td className="actions-cell">
-                        <button
-                          onClick={() => handleEdit(schedule)}
-                          className="edit-btn"
-                          title="Edit"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(schedule.id)}
-                          className="delete-btn"
-                          title="Delete"
-                        >
-                          <FaTrash />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="8" className="no-results">
-                      No schedules found matching your search criteria
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
 
-          {/* Report Download Button */}
-          <div className="report-download-container">
-            <button onClick={generatePDFReport} className="download-btn">
-              <FaFilePdf /> Download PDF Report
+          {/* Export to PDF Button */}
+          <div className="export-container">
+            <button className="btn-export" onClick={generatePDF}>
+              Export to PDF
             </button>
           </div>
         </>
@@ -801,18 +693,222 @@ const ScheduleViewer = () => {
 
       {/* Room Details Pop-up */}
       {showRoomDetails && (
-        <RoomDetailsPopup room={selectedRoom} onClose={() => setShowRoomDetails(false)} />
+        <div className="popup-overlay">
+          <RoomDetailsPopup
+            room={selectedRoom}
+            onClose={() => setShowRoomDetails(false)}
+          />
+        </div>
       )}
 
       {/* Instructor Details Pop-up */}
       {showInstructorDetails && (
-        <InstructorDetailsPopup
-          instructor={selectedInstructor}
-          onClose={() => setShowInstructorDetails(false)}
-        />
+        <div className="popup-overlay">
+          <InstructorDetailsPopup
+            instructor={selectedInstructor}
+            onClose={() => setShowInstructorDetails(false)}
+          />
+        </div>
       )}
-    </div>
-  )
-}
 
-export default ScheduleViewer
+      {/* CSS Styles */}
+      <style jsx>{`
+        .schedule-viewer-container {
+          padding: 20px;
+          font-family: Arial, sans-serif;
+        }
+
+        .controls-container {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          align-items: center;
+        }
+
+        .search-container {
+          display: flex;
+          align-items: center;
+        }
+
+        .search-input {
+          padding: 8px 12px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          width: 300px;
+        }
+
+        .export-container {
+          margin-top: 20px;
+          text-align: right;
+        }
+
+        .btn-export {
+          background-color: #4CAF50;
+          color: white;
+          padding: 10px 15px;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+
+        .btn-export:hover {
+          background-color: #45a049;
+        }
+
+        .btn-add, .btn-submit {
+          background-color: green;
+          color: white;
+          padding: 10px 20px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          margin-bottom: 20px;
+        }
+
+        .btn-edit {
+          background-color: #8B8000;
+          color: white;
+          padding: 5px 10px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          margin-right: 5px;
+        }
+
+        .btn-delete {
+          background-color: #8B0000;
+          color: white;
+          padding: 5px 10px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+
+        .btn-cancel {
+          background-color: gray;
+          color: white;
+          padding: 10px 20px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          margin-left: 10px;
+        }
+
+        .schedule-form {
+          margin-bottom: 20px;
+          max-width: 500px;
+          background: #2b2b2b;
+          padding: 20px;
+          border-radius: 5px;
+          color: white;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        .form-group {
+          margin-bottom: 10px;
+        }
+
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+        }
+
+        .form-group input, .form-group select {
+          width: 100%;
+          padding: 5px;
+          background: #3d3d3d;
+          color: white;
+          border: 1px solid #555;
+          border-radius: 3px;
+        }
+
+        .input-error {
+          border-color: #ff4444 !important;
+        }
+
+        .error-message {
+          color: #ff4444;
+          font-size: 12px;
+          margin-top: 5px;
+          display: block;
+        }
+
+        .form-actions {
+          margin-top: 15px;
+        }
+
+        .schedule-table {
+          width: 100%;
+          margin-top: 20px;
+          border-collapse: collapse;
+          color: white;
+        }
+
+        .schedule-table th, .schedule-table td {
+          padding: 10px;
+          border: 1px solid #444;
+          text-align: left;
+        }
+
+        .schedule-table th {
+          background-color: #333;
+        }
+
+        .schedule-table tr:hover {
+          background-color: #3d3d3d;
+        }
+
+        .actions-cell {
+          text-align: center;
+        }
+
+        .clickable-text {
+          color: #4dabf7;
+          cursor: pointer;
+          text-decoration: underline;
+        }
+
+        .popup-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+
+        .popup-container {
+          position: relative;
+          background-color: #333;
+          color: white;
+          padding: 20px;
+          border-radius: 10px;
+          width: 400px;
+          max-width: 90%;
+          box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+
+        .popup-close-btn {
+          background-color: #007bff;
+          color: white;
+          padding: 5px 10px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          margin-top: 10px;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default ScheduleViewer;

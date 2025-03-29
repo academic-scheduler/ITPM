@@ -1,0 +1,117 @@
+/* frontend/src/views/smart-assistant/smartassistant.css */
+.smart-assistant-container {
+     max-width: 800px;
+     margin: 2rem auto;
+     padding: 2rem;
+     background-color: var(--cui-body-bg);
+     border-radius: 0.5rem;
+     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+   }
+   
+   .smart-assistant-container h2 {
+     color: var(--cui-body-color);
+     margin-bottom: 2rem;
+     text-align: center;
+   }
+   
+   .booking-form {
+     display: flex;
+     flex-direction: column;
+     gap: 1.5rem;
+   }
+   
+   .booking-form .form-group {
+     display: flex;
+     flex-direction: column;
+     gap: 0.5rem;
+   }
+   
+   .booking-form .form-group label {
+     font-weight: 600;
+     color: var(--cui-body-color);
+   }
+   
+   .booking-form .form-group input[type="text"],
+   .booking-form .form-group input[type="datetime-local"] {
+     width: 100%;
+     padding: 0.375rem 0.75rem;
+     border: 1px solid #dee2e6;
+     border-radius: 0.375rem;
+     background-color: var(--cui-border-color);
+     color: var(--cui-body-color);
+   }
+   
+   .booking-form .form-group input[type="text"]:focus,
+   .booking-form .form-group input[type="datetime-local"]:focus {
+     border-color: #86b7fe;
+     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+   }
+   
+   .booking-form .form-group input[inputmode="numeric"]::-webkit-outer-spin-button,
+   .booking-form .form-group input[inputmode="numeric"]::-webkit-inner-spin-button {
+     -webkit-appearance: none;
+     margin: 0;
+   }
+   
+   .booking-form .form-group input[inputmode="numeric"] {
+     -moz-appearance: textfield;
+   }
+   
+   .error-text {
+     color: var(--cui-danger);
+     font-size: 0.875rem;
+     margin-top: 0.25rem;
+   }
+   
+   .error-message {
+     color: var(--cui-danger);
+     padding: 1rem;
+     margin-top: 1rem;
+     border-radius: 0.375rem;
+     background-color: var(--cui-danger-bg);
+   }
+   
+   .result-container {
+     margin-top: 2rem;
+     padding: 1.5rem;
+     background-color: var(--cui-success-bg);
+     border-radius: 0.375rem;
+     border: 1px solid var(--cui-success-border-subtle);
+   }
+   
+   .result-container h3 {
+     color: var(--cui-success-text);
+     margin-bottom: 1rem;
+   }
+   
+   .result-container p {
+     color: var(--cui-body-color);
+     margin-bottom: 0.5rem;
+   }
+   
+   .submit-btn {
+     align-self: center;
+     padding: 0.5rem 1rem;
+     background-color: var(--cui-success);
+     color: var(--cui-white);
+     border: none;
+     border-radius: 0.5rem;
+     cursor: pointer;
+     transition: background-color 0.2s ease-in-out;
+   }
+   
+   .submit-btn:hover {
+     background-color: var(--cui-success-text-emphasis);
+   }
+   
+   @media (max-width: 768px) {
+     .smart-assistant-container {
+       margin: 1rem;
+       padding: 1.5rem;
+     }
+   
+     .submit-btn {
+       width: 100%;
+       text-align: center;
+     }
+   }
