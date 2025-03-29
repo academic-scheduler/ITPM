@@ -28,7 +28,7 @@ const getNav = (username) => [
   },
   {
     component: CNavItem,
-    name: 'Lecturer Requests',
+    name: 'Request Room',
     to: '/lecturer-requests',
     icon: <CIcon icon={cilBell} customClassName="nav-icon" />,
   },
@@ -40,6 +40,12 @@ const getNav = (username) => [
     icon: <CIcon icon={cilUserFemale} customClassName="nav-icon" />,
   },
 
+  {
+    component: CNavItem,
+    name: 'Lecturer Requests',
+    to: '/lecturer-requests-admin',
+    icon: <CIcon icon={cilBell} customClassName="nav-icon" />,
+  },
   {
     component: CNavTitle,
     name: 'Account',

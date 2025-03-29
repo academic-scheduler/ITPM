@@ -99,3 +99,53 @@ def get_user(request):
         return JsonResponse(data)
     except User.DoesNotExist:
         return JsonResponse({'error': 'User not found'}, status=404)
+    
+
+    
+@api_view(['GET'])
+def get_user_by_username(request):
+    """
+    Get user details by username
+    """
+    username = request.GET.get('username')
+    if not username:
+        return Response({'error': 'username parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(username=username)
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_staff': user.is_staff,
+            'is_active': user.is_active
+        })
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def get_user_room_requests(request):
+    """
+    Get room requests for a specific user
+    """
+    user_id = request.GET.get('user_id')
+    if not user_id:
+        return Response({'error': 'user_id parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Assuming you have a RoomRequest model
+        from room_allocation.models import RoomRequest
+        requests = RoomRequest.objects.filter(requested_by=user_id)
+        serialized_requests = [{
+            'id': req.id,
+            'room': req.room.id,
+            'start_time': req.start_time,
+            'end_time': req.end_time,
+            'status': req.status,
+            'requested_by': req.requested_by.id
+        } for req in requests]
+        return Response(serialized_requests)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

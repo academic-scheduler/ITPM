@@ -1,4 +1,6 @@
 # models.py
+# models.py
+# models.py
 
 from django.db import models # type: ignore
 from django.contrib.auth.models import User # type: ignore
@@ -17,6 +19,8 @@ class Room(models.Model):
 
     def __str__(self):
         return self.name
+    
+
 
 class Schedule(models.Model):
     course_code = models.CharField(max_length=20)
@@ -31,14 +35,20 @@ class Schedule(models.Model):
         return f"{self.course_code} - {self.room.name}"
 
 class RoomRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
     requested_by = models.ForeignKey(User, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=[("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected"), ("canceled", "Canceled")], default="pending")
-
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
     def __str__(self):
-        return f"Request for {self.room.name} by {self.requested_by.username}"
+        return f"Request #{self.id} for {self.room.name}"
 
 class Maintenance(models.Model):
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
@@ -48,3 +58,14 @@ class Maintenance(models.Model):
 
     def __str__(self):
         return f"Issue in {self.room.name}: {self.status}"
+
+class RoomOccupancy(models.Model):
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, db_column='room_id_id')
+    
+    class Meta:
+        verbose_name_plural = "Room Occupancies"
+    
+    def __str__(self):
+        return f"{self.room.name} occupied from {self.start_time} to {self.end_time}"

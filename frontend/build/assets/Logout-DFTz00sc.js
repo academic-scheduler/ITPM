@@ -1,0 +1,1 @@
+import{q as s,a,A as e,j as n}from"./index-Dzdc8_NM.js";import{a as r}from"./auth-D0pxq4wI.js";import"./api-Cg1DICNh.js";import"./index-t--hEgTQ.js";const m=()=>{const t=s(),{logout:o}=a.useContext(e);return a.useEffect(()=>{(async()=>{await r(),o(),t("/login")})()},[o,t]),n.jsx("div",{children:"Logging out..."})};export{m as default};

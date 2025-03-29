@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import React from 'react'
 
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
@@ -6,6 +7,7 @@ const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 const RoomAllocation = React.lazy(() => import('./views/Room-allocation/RoomAllocation'))
 const ScheduleViewer = React.lazy(() => import('./views/Schedule-viewer/ScheduleViewer'))
 const LecturerRequests = React.lazy(() => import('./views/Lecturer-requests/LecturerRequests'))
+const LecturerRequestsAdmin = React.lazy(() => import('./views/Lecturer-requests-admin/LecturerRequestAdmin'))
 const SmartAssistant = React.lazy(() => import('./views/smart-assistant/SmartAssistant'))
 
 const routes = [
@@ -14,6 +16,7 @@ const routes = [
   { path: '/lecturer-requests', name: 'Lecturer Requests', element: LecturerRequests },
   { path: '/', exact: true, name: 'Home' },
   { path: '/dashboard', name: 'Dashboard', element: Dashboard },
+  { path: '/lecturer-requests-admin', name: 'Lecturer Requests Admin', element: LecturerRequestsAdmin },
   { path: '/smart-assistant', name: 'Smart Assistant', element: SmartAssistant },
 ]
 
