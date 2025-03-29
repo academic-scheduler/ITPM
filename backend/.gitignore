@@ -297,9 +297,6 @@ venv.bak/
 # sftp configuration file 
 sftp-config.json 
 
-# Ignore Python cache files
-__pycache__/
-*.pyc
 
 
 # Package control specific files Package 
@@ -316,3 +313,7 @@ GitHub.sublime-settings
 !.vscode/launch.json 
 !.vscode/extensions.json 
 .history
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
