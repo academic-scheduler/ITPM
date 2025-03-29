@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'room_allocation',
     'accounts',
+    'smart_assistant',
 ]
 
 MIDDLEWARE = [
