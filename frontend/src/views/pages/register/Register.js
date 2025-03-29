@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import React, { useState } from 'react'
 import {
   CButton,
@@ -10,6 +11,7 @@ import {
   CInputGroup,
   CInputGroupText,
   CRow,
+  CFormSelect, // Add CFormSelect for the role dropdown
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilLockLocked, cilUser } from '@coreui/icons'
@@ -24,6 +26,7 @@ const Register = () => {
     email: '',
     password1: '',
     password2: '',
+    role: '', // Add the role field
   })
 
   const navigate = useNavigate() // Initialize navigate
@@ -36,6 +39,10 @@ const Register = () => {
     e.preventDefault()
     if (formData.password1 !== formData.password2) {
       alert('Passwords do not match')
+      return
+    }
+    if (!formData.role) {
+      alert('Please select a role (student, lecturer, or instructor)')
       return
     }
     try {
@@ -98,6 +105,7 @@ const Register = () => {
                       autoComplete="username"
                     />
                   </CInputGroup>
+                  
                   <CInputGroup className="mb-3">
                     <CInputGroupText>@</CInputGroupText>
                     <CFormInput
@@ -108,6 +116,7 @@ const Register = () => {
                       autoComplete="email"
                     />
                   </CInputGroup>
+
                   <CInputGroup className="mb-3">
                     <CInputGroupText>
                       <CIcon icon={cilLockLocked} />
@@ -121,6 +130,7 @@ const Register = () => {
                       autoComplete="new-password"
                     />
                   </CInputGroup>
+
                   <CInputGroup className="mb-4">
                     <CInputGroupText>
                       <CIcon icon={cilLockLocked} />
@@ -134,6 +144,24 @@ const Register = () => {
                       autoComplete="new-password"
                     />
                   </CInputGroup>
+
+                  {/* Add a dropdown for selecting role */}
+                  <CInputGroup className="mb-3">
+                    <CInputGroupText>
+                      <CIcon icon={cilUser} />
+                    </CInputGroupText>
+                    <CFormSelect
+                      name="role"
+                      value={formData.role}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Role</option>
+                      <option value="student">Student</option>
+                      <option value="lecturer">Lecturer</option>
+                      <option value="instructor">Instructor</option>
+                    </CFormSelect>
+                  </CInputGroup>
+
                   <div className="d-grid">
                     <CButton type="submit" color="success">
                       Create Account

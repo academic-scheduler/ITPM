@@ -1,9 +1,9 @@
-# accounts/views.py
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
+from rest_framework.authtoken.models import Token
 from .models import Profile
 from .serializers import ProfileSerializer
 from django.http import JsonResponse
@@ -25,7 +25,7 @@ def api_login(request):
 def api_logout(request):
     auth_logout(request)
     return Response({'message': 'Logged out successfully'})
-    
+
 @api_view(['POST'])
 def login_user(request):
     username = request.data.get('username')
@@ -93,13 +93,19 @@ def register_user(request):
         first_name=first_name,
         last_name=last_name
     )
-
+    
     # Create Profile and assign role
     profile = Profile.objects.create(user=user)
     if role == 'instructor':
         profile.is_instructor = True
     elif role == 'lecturer':
         profile.is_lecturer = True
+    elif role == 'student':
+        profile.is_student = True
+    else:
+        return Response({'error': 'Invalid role. Choose "student", "lecturer", or "instructor".'},
+                       status=status.HTTP_400_BAD_REQUEST)
+    
     profile.save()
 
     serializer = ProfileSerializer(profile)
@@ -129,6 +135,27 @@ def get_users(request):
         return JsonResponse(data, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+def get_user(request):
+    user_id = request.GET.get('user_id')
+    if not user_id:
+        return JsonResponse({'error': 'user_id is required'}, status=400)
+
+    try:
+        user = User.objects.get(id=user_id)
+        data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_staff': user.is_staff,
+            'is_active': user.is_active,
+        }
+        return JsonResponse(data)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
 
 @api_view(['PUT'])
 def edit_user(request, pk):
@@ -163,3 +190,44 @@ def delete_user(request, pk):
 
     user.delete()
     return Response({'message': 'User deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+def get_user_by_username(request):
+    username = request.GET.get('username')
+    if not username:
+        return Response({'error': 'username parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(username=username)
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_staff': user.is_staff,
+            'is_active': user.is_active
+        })
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def get_user_room_requests(request):
+    user_id = request.GET.get('user_id')
+    if not user_id:
+        return Response({'error': 'user_id parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        from room_allocation.models import RoomRequest
+        requests = RoomRequest.objects.filter(requested_by=user_id)
+        serialized_requests = [{
+            'id': req.id,
+            'room': req.room.id,
+            'start_time': req.start_time,
+            'end_time': req.end_time,
+            'status': req.status,
+            'requested_by': req.requested_by.id
+        } for req in requests]
+        return Response(serialized_requests)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
