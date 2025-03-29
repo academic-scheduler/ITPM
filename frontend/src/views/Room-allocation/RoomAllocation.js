@@ -1,6 +1,8 @@
 /* eslint-disable prettier/prettier */
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const RoomsPage = () => {
   const [rooms, setRooms] = useState([]);
@@ -75,6 +77,80 @@ const RoomsPage = () => {
     setFilteredRooms(filtered);
   }, [searchTerm, filters, rooms]);
 
+  const generatePDFReport = () => {
+    const doc = new jsPDF();
+    
+    // Title and metadata
+    doc.setFontSize(18);
+    doc.text('Room Management Report', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+    doc.text(`Total Rooms: ${rooms.length}`, 14, 42);
+    doc.text(`Filtered Rooms: ${filteredRooms.length}`, 14, 52);
+    
+    // Active filters
+    let filtersText = 'Active Filters: ';
+    if (searchTerm) filtersText += `Search: "${searchTerm}" `;
+    if (filters.room_type) filtersText += `Type: ${filters.room_type} `;
+    if (filters.min_capacity) filtersText += `Min Capacity: ${filters.min_capacity} `;
+    if (filters.has_ac) filtersText += 'AC ';
+    if (filters.has_projector) filtersText += 'Projector ';
+    if (filters.has_whiteboard) filtersText += 'Whiteboard ';
+    if (filters.has_sound_system) filtersText += 'Sound System ';
+    if (filters.has_wifi) filtersText += 'WiFi ';
+    if (filters.availability) filtersText += 'Available Only ';
+    
+    doc.text(filtersText, 14, 62);
+    
+    // Table data with "Yes"/"No" instead of checkmarks
+    const tableData = filteredRooms.map(room => [
+      room.id,
+      room.name,
+      room.capacity,
+      room.location,
+      room.room_type.replace('_', ' '),
+      room.has_ac ? 'Yes' : 'No',
+      room.has_projector ? 'Yes' : 'No',
+      room.has_whiteboard ? 'Yes' : 'No',
+      room.has_sound_system ? 'Yes' : 'No',
+      room.has_wifi ? 'Yes' : 'No',
+      room.availability ? 'Yes' : 'No'
+    ]);
+    
+    // Create table
+    autoTable(doc, {
+      head: [
+        ['ID', 'Name', 'Capacity', 'Location', 'Type', 'AC', 'Projector', 'Whiteboard', 'Sound', 'WiFi', 'Available']
+      ],
+      body: tableData,
+      startY: 70,
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fillColor: [52, 58, 64],
+        textColor: 255
+      },
+      alternateRowStyles: {
+        fillColor: [248, 249, 250]
+      },
+      // Optional: Center-align the Yes/No columns
+      columnStyles: {
+        5: { cellWidth: 'auto', halign: 'center' },
+        6: { cellWidth: 'auto', halign: 'center' },
+        7: { cellWidth: 'auto', halign: 'center' },
+        8: { cellWidth: 'auto', halign: 'center' },
+        9: { cellWidth: 'auto', halign: 'center' },
+        10: { cellWidth: 'auto', halign: 'center' }
+      }
+    });
+    
+    // Save the PDF - REMOVED THE DUPLICATE LINE
+    doc.save(`rooms_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
   // Handle search input change
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
@@ -243,8 +319,7 @@ const RoomsPage = () => {
           padding: '20px',
           borderRadius: '8px',
           marginBottom: '20px',
-          border: '1px solid #dee2e6',
-          color: 'white'
+          border: '1px solid #dee2e6'
         }}>
           <h3 style={{ marginTop: '0', color: '#' }}>Filter Rooms</h3>
           <div style={{ 
@@ -378,21 +453,39 @@ const RoomsPage = () => {
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          style={{
-            backgroundColor: '#28a745',
-            padding: '10px 20px',
-            fontSize: '14px',
-            border: 'none',
-            cursor: 'pointer',
-            borderRadius: '4px',
-            color: 'white',
-            fontWeight: '500'
-          }}
-        >
-          {showAddForm ? 'Cancel' : '+ Add New Room'}
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            style={{
+              backgroundColor: '#28a745',
+              padding: '10px 20px',
+              fontSize: '14px',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              color: 'white',
+              fontWeight: '500'
+            }}
+          >
+            {showAddForm ? 'Cancel' : '+ Add New Room'}
+          </button>
+          
+          <button
+            onClick={generatePDFReport}
+            style={{
+              backgroundColor: '#dc3545',
+              padding: '10px 20px',
+              fontSize: '14px',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              color: 'white',
+              fontWeight: '500'
+            }}
+          >
+            Generate PDF Report
+          </button>
+        </div>
         
         <div style={{ color: '#6c757d' }}>
           Showing {filteredRooms.length} of {rooms.length} rooms
@@ -404,12 +497,12 @@ const RoomsPage = () => {
         <form onSubmit={handleAddRoom} style={{ 
           marginBottom: '30px', 
           maxWidth: '800px',
-          backgroundColor: '#',
+          backgroundColor: '#f8f9fa',
           padding: '20px',
           borderRadius: '8px',
           border: '1px solid #dee2e6'
         }}>
-          <h3 style={{ marginTop: '0', color: '#' }}>Add New Room</h3>
+          <h3 style={{ marginTop: '0', color: '#343a40' }}>Add New Room</h3>
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
@@ -487,7 +580,7 @@ const RoomsPage = () => {
             </div>
             
             <div style={{ gridColumn: '1 / -1' }}>
-              <h4 style={{ marginBottom: '10px', color: '#' }}>Amenities</h4>
+              <h4 style={{ marginBottom: '10px', color: '#343a40' }}>Amenities</h4>
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
