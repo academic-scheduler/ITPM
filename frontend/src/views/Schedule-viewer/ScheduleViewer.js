@@ -2,6 +2,194 @@
 import React, { useEffect, useState, useRef } from 'react';
 import api from '../../services/api';
 
+// ScheduleForm component moved outside to prevent redefinition on every render
+const ScheduleForm = ({
+  isEdit,
+  schedule,
+  onSubmit,
+  onCancel,
+  formErrors,
+  onChange
+}) => {
+  const courseCodeRef = useRef(null);
+  const editCourseCodeRef = useRef(null);
+
+  // Focus on the first input when the form mounts
+  useEffect(() => {
+    const inputRef = isEdit ? editCourseCodeRef : courseCodeRef;
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEdit]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    onChange(name, value);
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="schedule-form">
+      <h3>{isEdit ? 'Edit Schedule' : 'Add New Schedule'}</h3>
+      <div className="form-grid">
+        <div className="form-group">
+          <label>Course Code:</label>
+          <input
+            ref={isEdit ? editCourseCodeRef : courseCodeRef}
+            type="text"
+            name="course_code"
+            value={schedule.course_code}
+            onChange={handleChange}
+            className={formErrors.course_code ? 'input-error' : ''}
+          />
+          {formErrors.course_code && <span className="error-message">{formErrors.course_code}</span>}
+        </div>
+        <div className="form-group">
+          <label>Course Name:</label>
+          <input
+            type="text"
+            name="course_name"
+            value={schedule.course_name}
+            onChange={handleChange}
+            className={formErrors.course_name ? 'input-error' : ''}
+          />
+          {formErrors.course_name && <span className="error-message">{formErrors.course_name}</span>}
+        </div>
+        <div className="form-group">
+          <label>Instructor ID:</label>
+          <input
+            type="number"
+            name="instructor"
+            value={schedule.instructor}
+            onChange={handleChange}
+            className={formErrors.instructor ? 'input-error' : ''}
+          />
+          {formErrors.instructor && <span className="error-message">{formErrors.instructor}</span>}
+        </div>
+        <div className="form-group">
+          <label>Room ID:</label>
+          <input
+            type="number"
+            name="room"
+            value={schedule.room}
+            onChange={handleChange}
+            className={formErrors.room ? 'input-error' : ''}
+          />
+          {formErrors.room && <span className="error-message">{formErrors.room}</span>}
+        </div>
+        <div className="form-group">
+          <label>Start Time:</label>
+          <input
+            type="datetime-local"
+            name="start_time"
+            value={isEdit ? schedule.start_time.slice(0, 16) : schedule.start_time}
+            onChange={handleChange}
+            className={formErrors.start_time ? 'input-error' : ''}
+          />
+          {formErrors.start_time && <span className="error-message">{formErrors.start_time}</span>}
+        </div>
+        <div className="form-group">
+          <label>End Time:</label>
+          <input
+            type="datetime-local"
+            name="end_time"
+            value={isEdit ? schedule.end_time.slice(0, 16) : schedule.end_time}
+            onChange={handleChange}
+            className={formErrors.end_time ? 'input-error' : ''}
+          />
+          {formErrors.end_time && <span className="error-message">{formErrors.end_time}</span>}
+        </div>
+        <div className="form-group">
+          <label>Status:</label>
+          <select
+            name="status"
+            value={schedule.status}
+            onChange={handleChange}
+          >
+            <option value="scheduled">Scheduled</option>
+            <option value="completed">Completed</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </div>
+      </div>
+      <div className="form-actions">
+        <button type="submit" className="btn-submit">
+          {isEdit ? 'Save Changes' : 'Add Schedule'}
+        </button>
+        <button type="button" className="btn-cancel" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// RoomDetailsPopup component
+const RoomDetailsPopup = ({ room, onClose }) => {
+  if (!room) {
+    return (
+      <div className="popup-container">
+        <h3>Room Details</h3>
+        <p>No room details available.</p>
+        <button className="popup-close-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="popup-container">
+      <h3>Room Details</h3>
+      <p><strong>Room ID:</strong> {room.id}</p>
+      <p><strong>Room Name:</strong> {room.name}</p>
+      <p><strong>Capacity:</strong> {room.capacity}</p>
+      <p><strong>Location:</strong> {room.location}</p>
+      <p><strong>Room Type:</strong> {room.room_type}</p>
+      <p><strong>Amenities:</strong></p>
+      <ul>
+        <li>AC: {room.has_ac ? 'Yes' : 'No'}</li>
+        <li>Projector: {room.has_projector ? 'Yes' : 'No'}</li>
+        <li>Whiteboard: {room.has_whiteboard ? 'Yes' : 'No'}</li>
+        <li>Sound System: {room.has_sound_system ? 'Yes' : 'No'}</li>
+        <li>Wi-Fi: {room.has_wifi ? 'Yes' : 'No'}</li>
+      </ul>
+      <p><strong>Availability:</strong> {room.availability ? 'Available' : 'Not Available'}</p>
+      <button className="popup-close-btn" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  );
+};
+
+// InstructorDetailsPopup component
+const InstructorDetailsPopup = ({ instructor, onClose }) => {
+  if (!instructor) {
+    return (
+      <div className="popup-container">
+        <h3>Instructor Details</h3>
+        <p>No instructor details available.</p>
+        <button className="popup-close-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="popup-container">
+      <h3>Instructor Details</h3>
+      <p><strong>Instructor ID:</strong> {instructor.id}</p>
+      <p><strong>Username:</strong> {instructor.username}</p>
+      <p><strong>Email:</strong> {instructor.email}</p>
+      <p><strong>First Name:</strong> {instructor.first_name}</p>
+      <p><strong>Last Name:</strong> {instructor.last_name}</p>
+      <button className="popup-close-btn" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  );
+};
+
 const ScheduleViewer = () => {
   const [schedules, setSchedules] = useState([]);
   const [filteredSchedules, setFilteredSchedules] = useState([]);
@@ -26,10 +214,7 @@ const ScheduleViewer = () => {
   const [errors, setErrors] = useState({});
   const [editErrors, setEditErrors] = useState({});
 
-  // Refs for focusing inputs
   const searchInputRef = useRef(null);
-  const courseCodeRef = useRef(null);
-  const editCourseCodeRef = useRef(null);
 
   // Load jsPDF and jspdf-autotable from CDN
   const loadPDFLibrary = () => {
@@ -170,16 +355,6 @@ const ScheduleViewer = () => {
 
     setEditErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  // Handle form field changes for both add and edit forms
-  const handleInputChange = (e, isEditForm = false) => {
-    const { name, value } = e.target;
-    if (isEditForm) {
-      setEditingSchedule({ ...editingSchedule, [name]: value });
-    } else {
-      setNewSchedule({ ...newSchedule, [name]: value });
-    }
   };
 
   // Handle adding a new schedule
@@ -395,185 +570,6 @@ const ScheduleViewer = () => {
     }
   };
 
-  // RoomDetailsPopup component
-  const RoomDetailsPopup = ({ room, onClose }) => {
-    if (!room) {
-      return (
-        <div className="popup-container">
-          <h3>Room Details</h3>
-          <p>No room details available.</p>
-          <button className="popup-close-btn" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="popup-container">
-        <h3>Room Details</h3>
-        <p><strong>Room ID:</strong> {room.id}</p>
-        <p><strong>Room Name:</strong> {room.name}</p>
-        <p><strong>Capacity:</strong> {room.capacity}</p>
-        <p><strong>Location:</strong> {room.location}</p>
-        <p><strong>Room Type:</strong> {room.room_type}</p>
-        <p><strong>Amenities:</strong></p>
-        <ul>
-          <li>AC: {room.has_ac ? 'Yes' : 'No'}</li>
-          <li>Projector: {room.has_projector ? 'Yes' : 'No'}</li>
-          <li>Whiteboard: {room.has_whiteboard ? 'Yes' : 'No'}</li>
-          <li>Sound System: {room.has_sound_system ? 'Yes' : 'No'}</li>
-          <li>Wi-Fi: {room.has_wifi ? 'Yes' : 'No'}</li>
-        </ul>
-        <p><strong>Availability:</strong> {room.availability ? 'Available' : 'Not Available'}</p>
-        <button className="popup-close-btn" onClick={onClose}>
-          Close
-        </button>
-      </div>
-    );
-  };
-
-  // InstructorDetailsPopup component
-  const InstructorDetailsPopup = ({ instructor, onClose }) => {
-    if (!instructor) {
-      return (
-        <div className="popup-container">
-          <h3>Instructor Details</h3>
-          <p>No instructor details available.</p>
-          <button className="popup-close-btn" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="popup-container">
-        <h3>Instructor Details</h3>
-        <p><strong>Instructor ID:</strong> {instructor.id}</p>
-        <p><strong>Username:</strong> {instructor.username}</p>
-        <p><strong>Email:</strong> {instructor.email}</p>
-        <p><strong>First Name:</strong> {instructor.first_name}</p>
-        <p><strong>Last Name:</strong> {instructor.last_name}</p>
-        <button className="popup-close-btn" onClick={onClose}>
-          Close
-        </button>
-      </div>
-    );
-  };
-
-  // Form component for both add and edit
-  const ScheduleForm = ({ isEdit, schedule, onSubmit, onCancel, formErrors }) => {
-    // Focus on the first input when the form mounts
-    useEffect(() => {
-      const inputRef = isEdit ? editCourseCodeRef : courseCodeRef;
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, [isEdit]);
-
-    return (
-      <form onSubmit={onSubmit} className="schedule-form">
-        <h3>{isEdit ? 'Edit Schedule' : 'Add New Schedule'}</h3>
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Course Code:</label>
-            <input
-              ref={isEdit ? editCourseCodeRef : courseCodeRef}
-              type="text"
-              name="course_code"
-              value={schedule.course_code}
-              onChange={(e) => handleInputChange(e, isEdit)}
-              required
-              className={formErrors.course_code ? 'input-error' : ''}
-            />
-            {formErrors.course_code && <span className="error-message">{formErrors.course_code}</span>}
-          </div>
-          <div className="form-group">
-            <label>Course Name:</label>
-            <input
-              type="text"
-              name="course_name"
-              value={schedule.course_name}
-              onChange={(e) => handleInputChange(e, isEdit)}
-              required
-              className={formErrors.course_name ? 'input-error' : ''}
-            />
-            {formErrors.course_name && <span className="error-message">{formErrors.course_name}</span>}
-          </div>
-          <div className="form-group">
-            <label>Instructor ID:</label>
-            <input
-              type="number"
-              name="instructor"
-              value={schedule.instructor}
-              onChange={(e) => handleInputChange(e, isEdit)}
-              required
-              className={formErrors.instructor ? 'input-error' : ''}
-            />
-            {formErrors.instructor && <span className="error-message">{formErrors.instructor}</span>}
-          </div>
-          <div className="form-group">
-            <label>Room ID:</label>
-            <input
-              type="number"
-              name="room"
-              value={schedule.room}
-              onChange={(e) => handleInputChange(e, isEdit)}
-              required
-              className={formErrors.room ? 'input-error' : ''}
-            />
-            {formErrors.room && <span className="error-message">{formErrors.room}</span>}
-          </div>
-          <div className="form-group">
-            <label>Start Time:</label>
-            <input
-              type="datetime-local"
-              name="start_time"
-              value={isEdit ? schedule.start_time.slice(0, 16) : schedule.start_time}
-              onChange={(e) => handleInputChange(e, isEdit)}
-              required
-              className={formErrors.start_time ? 'input-error' : ''}
-            />
-            {formErrors.start_time && <span className="error-message">{formErrors.start_time}</span>}
-          </div>
-          <div className="form-group">
-            <label>End Time:</label>
-            <input
-              type="datetime-local"
-              name="end_time"
-              value={isEdit ? schedule.end_time.slice(0, 16) : schedule.end_time}
-              onChange={(e) => handleInputChange(e, isEdit)}
-              required
-              className={formErrors.end_time ? 'input-error' : ''}
-            />
-            {formErrors.end_time && <span className="error-message">{formErrors.end_time}</span>}
-          </div>
-          <div className="form-group">
-            <label>Status:</label>
-            <select
-              name="status"
-              value={schedule.status}
-              onChange={(e) => handleInputChange(e, isEdit)}
-            >
-              <option value="scheduled">Scheduled</option>
-              <option value="completed">Completed</option>
-              <option value="canceled">Canceled</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-actions">
-          <button type="submit" className="btn-submit">
-            {isEdit ? 'Save Changes' : 'Add Schedule'}
-          </button>
-          <button type="button" className="btn-cancel" onClick={onCancel}>
-            Cancel
-          </button>
-        </div>
-      </form>
-    );
-  };
-
   return (
     <div className="schedule-viewer-container">
       <h1>Schedule Viewer</h1>
@@ -607,6 +603,9 @@ const ScheduleViewer = () => {
           onSubmit={handleAddSchedule}
           onCancel={() => setShowAddForm(false)}
           formErrors={errors}
+          onChange={(name, value) =>
+            setNewSchedule(prev => ({ ...prev, [name]: value }))
+          }
         />
       )}
 
@@ -618,6 +617,9 @@ const ScheduleViewer = () => {
           onSubmit={handleSave}
           onCancel={handleCancelEdit}
           formErrors={editErrors}
+          onChange={(name, value) =>
+            setEditingSchedule(prev => ({ ...prev, [name]: value }))
+          }
         />
       )}
 
