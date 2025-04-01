@@ -71,7 +71,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'Academic_Scheduler',
         'USER': 'postgres',
-        'PASSWORD': '220038',
+        'PASSWORD': '4321',
         'HOST': 'localhost'
     }
 }
