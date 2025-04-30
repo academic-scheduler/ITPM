@@ -6,5 +6,5 @@ urlpatterns = [
     path('api/', include('accounts.urls')),
     path('api/add-course/', include('course_management.urls')),
     path('api/room-allocation/', include('room_allocation.urls')),
-    path('api/smart-assistant/', include('smart_assistant.urls')),
+    path('api/', include('smart_assistant.urls')),
 ]
