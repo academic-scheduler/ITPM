@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import api from '../../services/api'
+import { FaEdit, FaTrash, FaSave, FaTimes } from 'react-icons/fa' // Import icons
 
 const CoursesPage = () => {
   const [courses, setCourses] = useState([])
@@ -8,6 +9,7 @@ const CoursesPage = () => {
   const [editedData, setEditedData] = useState({})
   const [showAddForm, setShowAddForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [exportLoading, setExportLoading] = useState(false)
   const [newCourse, setNewCourse] = useState({
     course_code: '',
     course_name: '',
@@ -202,12 +204,53 @@ const CoursesPage = () => {
     }
   }
 
+  // Export courses as PDF
+  const handleExportPDF = async () => {
+    try {
+      setExportLoading(true)
+      // Use the current search term to filter the PDF if a search is active
+      const url = `api/add-course/courses/export-pdf/?search=${searchTerm}`
+
+      // Use axios to get the PDF as a blob
+      const response = await api.get(url, {
+        responseType: 'blob', // Important: tells axios to treat response as binary data
+      })
+
+      // Create a blob URL for the PDF data
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const downloadUrl = window.URL.createObjectURL(blob)
+
+      // Create a temporary link element and trigger download
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = 'courses_report.pdf'
+      document.body.appendChild(link)
+      link.click()
+
+      // Clean up
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (error) {
+      console.error('Error exporting PDF:', error)
+      alert('Failed to export PDF.')
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
       <h1>Course Management</h1>
 
-      {/* Search Bar */}
-      <div style={{ marginBottom: '20px' }}>
+      {/* Search and Export Controls */}
+      <div
+        style={{
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <input
           type="text"
           placeholder="Search courses..."
@@ -220,9 +263,26 @@ const CoursesPage = () => {
             border: '1px solid #ccc',
           }}
         />
+
+        <button
+          onClick={handleExportPDF}
+          disabled={exportLoading || loading || courses.length === 0}
+          style={{
+            backgroundColor: '#2a52be',
+            padding: '10px 20px',
+            fontSize: '14px',
+            border: 'none',
+            cursor: courses.length === 0 ? 'not-allowed' : 'pointer',
+            borderRadius: '5px',
+            color: 'white',
+            opacity: exportLoading || loading || courses.length === 0 ? 0.7 : 1,
+          }}
+        >
+          {exportLoading ? 'Exporting...' : 'Export as PDF'}
+        </button>
       </div>
 
-      {/* Add Course Form */}
+      {/* Add Course Button */}
       <button
         onClick={() => setShowAddForm(!showAddForm)}
         style={{
@@ -238,6 +298,8 @@ const CoursesPage = () => {
       >
         {showAddForm ? 'Cancel' : 'Add Course'}
       </button>
+
+      {/* Add Course Form */}
       {showAddForm && (
         <form onSubmit={handleAddCourse} style={{ marginBottom: '20px', maxWidth: '500px' }}>
           <h3>Add New Course</h3>
@@ -338,6 +400,8 @@ const CoursesPage = () => {
       {/* Courses Table */}
       {loading ? (
         <p>Loading courses...</p>
+      ) : courses.length === 0 ? (
+        <p>No courses found. {searchTerm && 'Try a different search term.'}</p>
       ) : (
         <table
           style={{
@@ -475,9 +539,13 @@ const CoursesPage = () => {
                           cursor: 'pointer',
                           borderRadius: '5px',
                           color: 'white',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
+                        title="Save"
                       >
-                        Save
+                        <FaSave style={{ marginRight: '4px' }} /> Save
                       </button>
                       <button
                         onClick={handleCancel}
@@ -489,9 +557,13 @@ const CoursesPage = () => {
                           cursor: 'pointer',
                           borderRadius: '5px',
                           color: 'white',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
+                        title="Cancel"
                       >
-                        Cancel
+                        <FaTimes style={{ marginRight: '4px' }} /> Cancel
                       </button>
                     </>
                   ) : (
@@ -507,9 +579,15 @@ const CoursesPage = () => {
                           cursor: 'pointer',
                           borderRadius: '5px',
                           color: 'white',
+                          width: '32px',
+                          height: '32px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
+                        title="Edit"
                       >
-                        Edit
+                        <FaEdit />
                       </button>
                       <button
                         onClick={() => handleDelete(course.id)}
@@ -521,9 +599,15 @@ const CoursesPage = () => {
                           cursor: 'pointer',
                           borderRadius: '5px',
                           color: 'white',
+                          width: '32px',
+                          height: '32px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
+                        title="Delete"
                       >
-                        Delete
+                        <FaTrash />
                       </button>
                     </>
                   )}

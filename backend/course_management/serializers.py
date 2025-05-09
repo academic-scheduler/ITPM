@@ -13,7 +13,5 @@ class CourseSerializer(serializers.ModelSerializer):
 
     def validate_course_name(self, value):
         if not value.replace(' ', '').isalpha():
-            raise serializers.ValidationError({
-                'course_name': 'Course name can only contain alphabetic characters and spaces.'
-            })
+            raise serializers.ValidationError("Course name can only contain alphabetic characters and spaces.")
         return value
